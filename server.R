@@ -21,6 +21,9 @@ function(input, output, session) {
   selectedB <- reactive({
     (fullset[,(input$bcol)])
   })
+  bins <- reactive({
+    as.integer(input$bins)
+  })
   #selected <- reactive({fullset %>%})
   
   #clusters <- reactive({
@@ -35,16 +38,16 @@ function(input, output, session) {
     
     df %>% ggplot(aes(x = df$x, y = df$y, color = as.factor(df$z))) +
              geom_point(position = "jitter") + 
-              labs( x= input$xcol, y = input$ycol, color = input$zcol) +
-      geom_smooth(method = "lm", se = FALSE)
+              labs( x= input$xcol, y = input$ycol, color = input$zcol)
     
     
   })
   
   output$plot2 <- renderPlot ({
     df1 = data.frame(selectedA(), selectedB())
-    colnames(df)= c("A", "B")
+    colnames(df1)= c("A", "B")
     
-    df1 %>% ggplot(aes(x = A, color = as.factor(B))) + geom_histogram(stat = "count")
+    df1 %>% ggplot(aes(x = A, fill = as.factor(B))) +
+      geom_histogram(bins = bins()) + labs( x= input$acol, y = "Count", fill = input$bcol)
   })
 }

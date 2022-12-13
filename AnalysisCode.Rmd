@@ -103,7 +103,7 @@ fullset_noNA$Attrition = as.numeric(fullset_noNA$Attrition)
 trash_features = upSample(fullset_noNA, fullset$Attrition, yname = "Attrition")
 trash_train = subset(trash_features, select = -c(Attrition))
 
-trashknn = knn.cv(trash_train, trash_features$Attrition, k=3, prob = TRUE)
+trashknn = knn.cv(trash_train, trash_features$Attrition, k=3, prob = TRUE) # didn't pan out
 
 #train = subset(fullset, select = -c(Attrition))
 
