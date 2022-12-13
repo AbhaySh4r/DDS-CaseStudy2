@@ -7,6 +7,8 @@ Repository that contains all the core files for the DDS Case Study Project 2
 
 -datapull.R: General script with all generation code commented
 
+-Analysis.rmd: commented and seperated selections from datapull.R
+
 Data Directory:
 
 -housing_fullset.csv: Full Training Dataset
