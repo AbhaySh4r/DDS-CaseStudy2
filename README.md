@@ -8,19 +8,11 @@ Repository that contains all the core files for the DDS Case Study Project 2
 -datapull.R: General script with all generation code commented
 
 Data Directory:
-<<<<<<< HEAD
 
 -housing_fullset.csv: Full Training Dataset
 
 -housing_noattr.csv: Test dataset with no attrition
 
--housing_nosal.csv: Test dataset with no salary (MonthlyIncome)
-
--Case2PredictionsKNNSharma_Attrition.csv : Predicted Attrition Values
-
-=======
--housing_fullset.csv: Full Training Dataset
--housing_noattr.csv: Test dataset with no attrition
 -housing_nosal.csv: Test dataset with no salary (MonthlyIncome)
 
 -Case2PredictionsKNNSharma_Attrition.csv : Predicted Attrition Values
