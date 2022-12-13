@@ -15,6 +15,6 @@ Data Directory:
 
 -housing_nosal.csv: Test dataset with no salary (MonthlyIncome)
 
--Case2PredictionsKNNSharma_Attrition.csv : Predicted Attrition Values
+Project Requirement-Case2PredictionsKNNSharma_Attrition.csv : Predicted Attrition Values
 
--Case2PredictionsSharma_Salary.csv       : Predicted Salary (Monthly Income Values)
+Project Requirement-Case2PredictionsSharma_Salary.csv       : Predicted Salary (Monthly Income Values)
