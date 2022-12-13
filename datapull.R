@@ -1,7 +1,4 @@
 # General Script connecting to Smuddsproject2 bucket
-Sys.setenv("AWS_ACCESS_KEY_ID" = "AKIAXNDHFDN3FSMJBJF5",
-"AWS_SECRET_ACCESS_KEY" = "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", "AWS_DEFAULT_REGION" = "us-east-2")
-
 
 library(aws.s3)
 library(readxl)
