@@ -28,7 +28,7 @@ CompSetAttr <- s3read_using(FUN = read.csv, object = "CaseStudy2CompSet No Attri
 numericset <- fullset %>% select(where(is_numeric))
 fullset$Attrition = as.factor(fullset$Attrition)
 
-selected_features = numericset %>% select("Age", "MonthlyRate", "DistanceFromHome", "JobSatisfaction", "WorkLifeBalance", "YearsAtCompany")
+selected_features = numericset %>% select("Age", "MonthlyIncome", "DistanceFromHome", "JobSatisfaction", "WorkLifeBalance", "YearsAtCompany")
 selected_features$DistanceFromHome = as.factor(selected_features$DistanceFromHome)
 selected_features$WorkLifeBalance = as.factor(selected_features$WorkLifeBalance)
 
@@ -39,11 +39,12 @@ character_parameters = fullset %>% select_if(is.character) %>% names()
 
 fullset_conversion = fullset
 fullset_conversion[character_parameters] = lapply(fullset_conversion[character_parameters], factor)
-fullset_conversion = subset(fullset_conversion, select = -Over18) #rm over 18, one level
+fullset_conversion = subset(fullset_conversion, select = -c(Over18, EmployeeCount, StandardHours, ID, EmployeeNumber) )#rm no useful data
 fullset_conversion$MonthlyRate = log(fullset_conversion$MonthlyRate)
 
 characterset = fullset_conversion %>% select_if(is.factor) %>% names()
 fullset_conversion[characterset] = lapply(fullset_conversion[characterset], as.numeric)
+
 corrplot(cor(fullset_conversion), tl.cex = 0.5)
 fullset_conversion = subset(fullset_conversion, select = -c(EmployeeCount, StandardHours, ID, EmployeeNumber))
 corrplot(cor(fullset_conversion), tl.cex = 0.5)
@@ -62,7 +63,24 @@ importance = varImp(model, scale = FALSE)
 plot(importance)
 
 
+bestmodel <- lm((MonthlyIncome) ~. , data = fullset_conversion)
+bestselection = ols_step_best_subset(bestmodel)
+stepselection = ols_step_both_p(bestmodel, pent = 0.2, prem = 0.1, details = FALSE)
 
+#prediction for Salary (LR):
+t.nosal = NoSal
+t.nosal[characterset] = lapply(t.nosal[characterset], as.numeric)
+
+p.nosal = predict(stepselection$model,t.nosal)
+
+
+p_df = data.frame(NoSal$ID, p.nosal)
+colnames(p_df) = c("ID", "MonthlyIncome")
+
+write.csv(p_df, "./Data/Case2PredictionsSharma_Salary.csv", row.names = FALSE)
+
+summary(stepselection$model)
+plot(stepselection$model)
 ## Downsample to resolve class imbalance: 
 
 features_down = downSample(numericset, fullset$Attrition, yname = "Attrition") #downsample
@@ -73,12 +91,32 @@ train_up = subset(features_up, select = -c(Attrition))
 
 ## KNN Model Generation w/ DownSampling
 
+#garbagetest---------------------------------
+
+fullset_noNA = fullset_conversion %>% drop_na()
+fullset_noNA$Attrition = as.numeric(fullset_noNA$Attrition)
+trash_features = upSample(fullset_noNA, fullset$Attrition, yname = "Attrition")
+trash_train = subset(trash_features, select = -c(Attrition))
+
+trashknn = knn.cv(trash_train, trash_features$Attrition, k=3, prob = TRUE)
 
 #train = subset(fullset, select = -c(Attrition))
 
 
-knn_model = knn.cv(train_up, features_up$Attrition, k = 3, prob = TRUE)
+knn_model = knn.cv(train_up, features_up$Attrition, k = 1, prob = TRUE)
 confusionMatrix(table(knn_model, features_up$Attrition), positive = "Yes")
+
+maxKvalue = 100
+accuracyVector = c(maxKvalue)
+
+for(i in 1:maxKvalue){
+  classifications = knn.cv(train_up, features_up$Attrition, k = i, prob = TRUE)
+  accuracyVector[i] = confusionMatrix(table(classifications, features_up$Attrition),
+                                            positive = "Yes")$overall[1]
+}
+
+plot(seq(1, maxKvalue, 1), accuracyVector, type = "l",
+     xlab = "K value", ylab = "accuracy", main = "accuracy for k values")
 
 # Comp-Set KNN Model
 
@@ -86,25 +124,39 @@ CompSetAttrFeatures = CompSetAttr %>% select("Age", "MonthlyRate",
                                              "DistanceFromHome", "JobSatisfaction",
                                              "WorkLifeBalance", "YearsAtCompany")
 
-knn(train_up, CompSetAttrFeatures, features_up$Attrition, k = 3)
+attrcompset = knn(train_up, CompSetAttrFeatures, features_up$Attrition, k = 3)
+
+pa_df = data.frame(CompSetAttr$ID, attrcompset)
+colnames(pa_df) = c("ID", "Attrition")
 
 
 
+write.csv(pa_df, "./Data/Case2PredictionsKNNSharma_Attrition.csv", row.names = FALSE)
 
 ## Linear Model Generation
 
-filtered_numset <- numericset %>% select(-c(EmployeeCount, StandardHours))
+filtered_numset <- numericset %>% select(-c(ID, EmployeeCount, StandardHours, EmployeeNumber))
 cor(filtered_numset)
 corrplot(cor(filtered_numset), tl.cex = 0.6, method = 'ellipse', order = 'AOE', type = 'lower')
 
 fullset$Attrition = as.factor(fullset$Attrition)
 fullset %>% ggplot(aes(y = (MonthlyIncome), x = Education*JobLevel, color = fullset[,'Attrition'])) + geom_point() + geom_smooth(method = "lm", formula = y~poly(x,2))
 
-fit = lm(MonthlyIncome ~ TotalWorkingYears + StockOptionLevel + YearsWithCurrManager + Age, data = numericset)
+t_numericset = filtered_numset
+t_numericset[,c("Education", "EnvironmentSatisfaction", "JobLevel", "JobSatisfaction", "NumCompaniesWorked", "RelationshipSatisfaction", "StockOptionLevel")] =
+  lapply(t_numericset[,c("Education", "EnvironmentSatisfaction", "JobLevel", "JobSatisfaction", "NumCompaniesWorked", "RelationshipSatisfaction", "StockOptionLevel")], 
+         as.factor)
+
+fit = lm(log(MonthlyIncome) ~ . + Age, data = t_numericset)
 badfit = lm(MonthlyIncome ~ ., data = fullset_conversion)
 # include class based income (maybe attrition/jobstatus)
 plot(fit)
+
+
+
+
 plot(badfit)
+
 
 
 
@@ -133,19 +185,24 @@ ext_train_up = subset(ext_features_up, select = -c(Attrition))
 ext_knn = knn(ext_train_up, AttrTest, ext_features_up$Attrition, k = 2)
 confusionMatrix(table(ext_knn, as.factor(AttrTestLabels$Attrition)), positive = "Yes")
 
-## NaiveBayes Model
+## NaiveBayes Model -- Attrition 
 library(klaR)
 
 
-badmeme = subset(fullset, select = -c(EmployeeCount, StandardHours, BusinessTravel, Department, EducationField, Gender, JobRole, MaritalStatus, Over18, OverTime))
+badmeme = subset(fullset, select = -c(ID,EmployeeCount, StandardHours,
+                                      BusinessTravel, Department, EducationField,
+                                       Gender, JobRole, MaritalStatus, Over18, OverTime))
 
 control = trainControl(method = "repeatedcv", number = 10, repeats = 10)
 
-nb_model <- train(Attrition ~ ., data = ext_features_up, method = "nb", trControl = control)
+nb_model <- train(Attrition ~ ., data = features_up, method = "nb", trControl = control)
 
 nb_prediction = predict(nb_model, ext_train_up)
 
 confusionMatrix(nb_prediction, ext_features_up$Attrition)
+
+
+
 
 ## Feature Importance: 
 
@@ -164,7 +221,9 @@ summary(fullset)
 badmeme = subset(fullset, select = -c(EmployeeCount, StandardHours, BusinessTravel, Department, EducationField, Gender, JobRole, MaritalStatus, Over18, OverTime))
 
 control = trainControl(method = "repeatedcv", number = 10, repeats = 10)
-model <- train(Attrition ~. , data = badmeme, method = "lvq", preProcess= "scale", trControl = control)
+model <- train(Attrition ~. , data = fullset_conversion, method = "lvq", preProcess= "scale", trControl = control)
+
+model1 <- train(MonthlyIncome ~., data = badmeme, method = "lvq", preProcess= "scale", trControl = control)
 
 importance = varImp(model, scale = FALSE)
 plot(importance)
